@@ -1,31 +1,30 @@
 server {
     listen 80 default_server;
-
-    listen 443 ssl;
-
-	server_name _;
-
-	ssl_certificate /config/keys/cert.crt;
-	ssl_certificate_key /config/keys/cert.key;
-
-    # Maximum file upload size is 100MB - change accordingly if needed
-    client_max_body_size 100M;
-    client_body_buffer_size 128k;
+    listen [::]:80 default_server;
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
 
     root /app/dokuwiki;
     index doku.php;
 
+    server_name _;
+
+    # all ssl related config moved to ssl.conf
+    include /config/nginx/ssl.conf;
+
+    client_max_body_size 0;
+
     location ~ /(conf/|bin/|inc/|vendor/) { deny all; }
- 
+
     #Support for X-Accel-Redirect
     location ~ ^/data/ { internal ; }
- 
+
     location ~ ^/lib.*\.(js|css|gif|png|ico|jpg|jpeg)$ {
         expires 365d;
     }
- 
+
     location / { try_files $uri $uri/ @dokuwiki; }
- 
+
     location @dokuwiki {
         # rewrites "doku.php/" out of the URLs if you set the userwrite setting to .htaccess in dokuwiki config page
         rewrite ^/_media/(.*) /lib/exe/fetch.php?media=$1 last;
@@ -35,12 +34,9 @@ server {
     }
 
     location ~ \.php$ {
-		fastcgi_split_path_info ^(.+\.php)(/.+)$;
-		# With php5-cgi alone:
-		fastcgi_pass 127.0.0.1:9000;
-		# With php5-fpm:
-		#fastcgi_pass unix:/var/run/php5-fpm.sock;
-		fastcgi_index index.php;
-		include /etc/nginx/fastcgi_params;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include /etc/nginx/fastcgi_params;
     }
 }
