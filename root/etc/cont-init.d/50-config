@@ -28,28 +28,28 @@ CORE_DIR=(\
 ## Move user folders to persistent storage
 for i in "${USER_DIRECTORY[@]}"; do
     [[ ! -d /config/dokuwiki/${i} ]] && \
-        [[ -d /app/dokuwiki/"${i}" ]] && \
-        mv /app/dokuwiki/"${i}" /config/dokuwiki/"${i}"/
+        [[ -d /app/www/public/"${i}" ]] && \
+        mv /app/www/public/"${i}" /config/dokuwiki/"${i}"/
 done
 
 ## Remove user folders
 for i in "${USER_DIRECTORY[@]}"; do
-[[ -d /app/dokuwiki/"${i}" ]] && \
-    rm -rf /app/dokuwiki/"${i}"
+[[ -d /app/www/public/"${i}" ]] && \
+    rm -rf /app/www/public/"${i}"
 done
 
 ## Make Symlinks
 for i in "${USER_DIRECTORY[@]}"; do
-[[ ! -L /app/dokuwiki/"${i}" ]] && \
-    ln -s /config/dokuwiki/"${i}" /app/dokuwiki/"${i}"
+[[ ! -L /app/www/public/"${i}" ]] && \
+    ln -s /config/dokuwiki/"${i}" /app/www/public/"${i}"
 done
 
-## Make Symlinks from /app/dokuwiki to /config/dokuwiki
+## Make Symlinks from /app/www/public to /config/dokuwiki
 ## This is to make sure plugins that include files
 ## from CORE_DIR work properly
 for i in "${CORE_DIR[@]}"; do
 [[ ! -L /config/dokuwiki/"${i}" ]] && \
-    ln -s /app/dokuwiki/"${i}" /config/dokuwiki/"${i}"
+    ln -s /app/www/public/"${i}" /config/dokuwiki/"${i}"
 done
 
 ## TODO: Remove this following bit by 12/19/2020
@@ -63,15 +63,13 @@ grep -qF 'post_max_size' /config/php/php-local.ini || echo 'post_max_size = 100M
 
 ## Remove install.php once setup & enable pretty urls to work after setting .htaccess method in admin panel.
 if [[ -f /config/dokuwiki/conf/local.php ]]; then
-    rm -rf /app/dokuwiki/install.php && \
-    sed -i -e 's/#location/location/g' \
-        /config/nginx/site-confs/default && \
+    rm -rf /app/www/public/install.php && \
     echo "Existing install found install.php not available"
 
     # when default savedir stil active: change it to the path IN the container
     if ! grep -q "^\$conf\[\'savedir\'\]\s*\=" /config/dokuwiki/conf/local.php; then
         echo "Set 'savedir' to absolute path in the container"
-        echo "\$conf['savedir'] = '/app/dokuwiki/data';" >> /config/dokuwiki/conf/local.php
+        echo "\$conf['savedir'] = '/app/www/public/data';" >> /config/dokuwiki/conf/local.php
     fi
 else
     echo "Go to http://IP-ADDRESS:PORT/install.php to configure your install then restart your container when finished to remove install.php"
@@ -83,5 +81,5 @@ sed -i 's%location ~ /(conf/|bin/|inc/|install.php) { deny all; }%location ~ /(c
 # permissions
 echo "[cont-init.d] Setting permissions this may take some time"
 chown -R abc:abc \
-    /app/dokuwiki \
+    /app/www/public \
     /config

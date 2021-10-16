@@ -40,10 +40,10 @@ RUN \
   /tmp/dokuwiki.tar.gz -L \
     "https://github.com/splitbrain/dokuwiki/archive/release_stable_${DOKUWIKI_RELEASE}.tar.gz" && \
   mkdir -p \
-    /app/dokuwiki && \
+    /app/www/public && \
   tar xf \
     /tmp/dokuwiki.tar.gz -C \
-    /app/dokuwiki --strip-components=1 && \
+    /app/www/public --strip-components=1 && \
   echo "**** cleanup ****" && \
   apk del --purge \
     build-dependencies && \
