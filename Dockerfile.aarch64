@@ -23,10 +23,10 @@ RUN \
     php8-gd \
     php8-iconv \
     php8-ldap \
-    php8-pecl-imagick \
     php8-pdo_mysql \
     php8-pdo_pgsql \
     php8-pdo_sqlite \
+    php8-pecl-imagick \
     php8-sqlite3 \
     php8-xml \
     php8-zip && \
