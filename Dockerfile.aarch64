@@ -1,4 +1,6 @@
-FROM ghcr.io/linuxserver/baseimage-alpine-nginx:arm64v8-3.15
+# syntax=docker/dockerfile:1
+
+FROM ghcr.io/linuxserver/baseimage-alpine-nginx:arm64v8-3.20
 
 # set version label
 ARG BUILD_DATE
@@ -10,46 +12,40 @@ LABEL maintainer="chbmb"
 RUN \
   echo "**** install build packages ****" && \
   apk add --no-cache --virtual=build-dependencies \
-    tar \
     xmlstarlet && \
   echo "**** install runtime packages ****" && \
   apk add --no-cache \
-    curl \
     imagemagick \
-    php8-bz2 \
-    php8-ctype \
-    php8-curl \
-    php8-dom \
-    php8-gd \
-    php8-iconv \
-    php8-ldap \
-    php8-pdo_mysql \
-    php8-pdo_pgsql \
-    php8-pdo_sqlite \
-    php8-pecl-imagick \
-    php8-sqlite3 \
-    php8-xml \
-    php8-zip && \
+    php83-bz2 \
+    php83-dom \
+    php83-gd \
+    php83-ldap \
+    php83-pdo_mysql \
+    php83-pdo_pgsql \
+    php83-pdo_sqlite \
+    php83-pecl-imagick \
+    php83-sqlite3 && \
   echo "**** install dokuwiki ****" && \
   if [ -z ${DOKUWIKI_RELEASE+x} ]; then \
     DOKUWIKI_RELEASE=$(wget https://download.dokuwiki.org/rss -O - 2>/dev/null | \
-        xmlstarlet sel -T -t -v '/rss/channel/item[1]/link' | \
-        cut -d'-' -f2-4 | cut -d'.' -f1 ); \
+      xmlstarlet sel -T -t -v '/rss/channel/item[1]/link' | \
+      cut -d'-' -f2-4 | cut -d'.' -f1 ); \
   fi && \
   curl -o \
   /tmp/dokuwiki.tar.gz -L \
-    "https://github.com/splitbrain/dokuwiki/archive/release_stable_${DOKUWIKI_RELEASE}.tar.gz" && \
+    "https://download.dokuwiki.org/src/dokuwiki/dokuwiki-${DOKUWIKI_RELEASE}.tgz" && \
   mkdir -p \
     /app/www/public && \
   tar xf \
     /tmp/dokuwiki.tar.gz -C \
     /app/www/public --strip-components=1 && \
+  printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
   echo "**** cleanup ****" && \
   apk del --purge \
     build-dependencies && \
   rm -rf \
-    /root/.cache \
-    /tmp/*
+    /tmp/* \
+    $HOME/.cache
 
 # copy local files
 COPY root/ /
