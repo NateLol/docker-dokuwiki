@@ -1,14 +1,17 @@
 #!/usr/bin/with-contenv bash
+# shellcheck shell=bash
 
 USER_DIRECTORY=(\
     "conf" \
     "data/attic" \
     "data/index" \
-    "data/media" \
     "data/media_attic" \
     "data/media_meta" \
+    "data/media" \
     "data/meta" \
     "data/pages" \
+    "lib/images/interwiki" \
+    "lib/images/smileys/local" \
     "lib/plugins" \
     "lib/tpl"
     )
@@ -19,16 +22,25 @@ CORE_DIR=(\
     )
 
 ## Make data directories
-[[ ! -d /config/dokuwiki/data ]]
+if [[ ! -d /config/dokuwiki/data ]]; then
     mkdir -p /config/dokuwiki/data
+fi
 
-[[ ! -d /config/dokuwiki/lib/ ]]
-    mkdir -p /config/dokuwiki/lib/
+if [[ ! -d /config/dokuwiki/lib/images/smileys ]]; then
+    mkdir -p /config/dokuwiki/lib/images/smileys/local
+fi
 
 ## Move user folders to persistent storage
 for i in "${USER_DIRECTORY[@]}"; do
-    if [[ ! -d /config/dokuwiki/${i} ]] && [[ -d /app/www/public/"${i}" ]]; then
+    if [[ ! -d /config/dokuwiki/"${i}" ]] && [[ -d /app/www/public/"${i}" ]]; then
         mv /app/www/public/"${i}" /config/dokuwiki/"${i}"/
+    fi
+done
+
+# Update built-in plugins
+for i in /app/www/public/lib/plugins/*/; do
+    if [[ -d "/config/dokuwiki/lib/plugins/$(basename "${i}")" ]] && [[ -d "/app/www/public/lib/plugins/$(basename "${i}")" ]] && [[ ! -L "/app/www/public/lib/plugins" ]]; then
+        cp -R /app/www/public/lib/plugins/"$(basename "${i}")"/* /config/dokuwiki/lib/plugins/"$(basename "${i}")"
     fi
 done
 
@@ -44,6 +56,7 @@ for i in "${USER_DIRECTORY[@]}"; do
     if [[ ! -L /app/www/public/"${i}" ]]; then
         ln -s /config/dokuwiki/"${i}" /app/www/public/"${i}"
     fi
+    lsiown abc:abc /config/dokuwiki/"${i}"
 done
 
 ## Make Symlinks from /app/www/public to /config/dokuwiki
@@ -56,12 +69,8 @@ for i in "${CORE_DIR[@]}"; do
     if [[ ! -L /config/dokuwiki/"${i}" ]]; then
         ln -s /app/www/public/"${i}" /config/dokuwiki/"${i}"
     fi
+    lsiown abc:abc /config/dokuwiki/"${i}"
 done
-
-## TODO: Remove this following bit by 12/19/2020
-# Remove erronously added configs post-init
-sed -i "s/^upload_max_filesize = 100MB$//g" /config/php/php-local.ini
-sed -i "s/^post_max_size = 100MB$//g" /config/php/php-local.ini
 
 ## Bump php upload max filesize and post max size to 100MB by default
 if ! grep -qF 'upload_max_filesize' /config/php/php-local.ini; then
@@ -74,12 +83,11 @@ fi
 ## Remove install.php once setup & enable pretty urls to work after setting .htaccess method in admin panel.
 if [[ -f /config/dokuwiki/conf/local.php ]]; then
     if rm -rf /app/www/public/install.php; then
-        echo "Existing install found install.php not available"
+        echo "Existing install found, deleting install.php."
     fi
 
     # when default savedir stil active: change it to the path IN the container
     if ! grep -q "^\$conf\[\'savedir\'\]\s*\=" /config/dokuwiki/conf/local.php; then
-        echo "Set 'savedir' to absolute path in the container"
         echo "\$conf['savedir'] = '/app/www/public/data';" >> /config/dokuwiki/conf/local.php
     fi
 
@@ -93,7 +101,7 @@ fi
 sed -i 's%location ~ /(conf/|bin/|inc/|install.php) { deny all; }%location ~ /(conf/|bin/|inc/|vendor/) { deny all; }%' /config/nginx/site-confs/default.conf
 
 # permissions
-echo "[cont-init.d] Setting permissions this may take some time"
-chown -R abc:abc \
-    /app/www/public \
-    /config
+lsiown -R abc:abc \
+    /app/www/public/data \
+    /app/www/public/inc/lang \
+    /config/dokuwiki/lib
